@@ -8,7 +8,7 @@ fn main() -> std::io::Result<()> {
     
     // ? is equivalent to:
     // match x {
-    //   Ok(v) => v
+    //   Ok(v) => v,
     //   Err(e) => return Err(e.into()),
     // }
     // where x returns Result<(v, e)>
@@ -30,27 +30,24 @@ fn main() -> std::io::Result<()> {
 // handler takes the connection stream and wraps it in a buffer
 // the buffered data is read line by line and collected into a vector using .collect()
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
-    
-    // wrap steam in buffer 
     let buf_reader = BufReader::new(&stream);
-    
-    // build he http request being sent from the client 
-    let http_request: Vec<String> = buf_reader
-        .lines() // return an iterator over the lines in buf_reader (from BufReader trait)
-        .map(|result| match result {
-            Ok(v) => v,
-            Err(e) => panic!("ERROR: failed to read line {e}"),
-        }) // error handling and mapping the Result<String, _> to Vec<String>
-        .take_while(|line| !line.is_empty()) // read until an empty line (last line in http req)
-        .collect(); // collect into Vec<String>
+    let request_line = match buf_reader.lines().next() {
+        Some(line) => line,
+        None => panic!("ERROR: failed to parse http request"),
+    }?;
 
-    let status_line = "HTTP/1.1 200 OK";
-    let contents = fs::read_to_string("rust.html")?;
+    let (status_line, filename) = if request_line == "GET / HTTP/1.1" {
+        ("HTTP/1.1 200 OK", "rust.html")
+    } else {
+        ("HTTP/1.1 404 NOT FOUND", "404.html")
+    };
+
+    let contents = fs::read_to_string(filename)?;
     let length = contents.len();
-
-    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
-    println!("HTTP Response: {http_request:#?}");
-    stream.write_all(response.as_bytes())?; 
+    let response = format!(
+        "{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}"
+    );
+    stream.write_all(response.as_bytes())?;
     
     Ok(())
 }
