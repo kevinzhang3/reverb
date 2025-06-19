@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{BufReader, prelude::*},
     net::{TcpListener, TcpStream},
 };
@@ -21,20 +22,31 @@ fn main() -> std::io::Result<()> {
     for stream in listener.incoming() {
         let stream = stream?;
         
-        handle_connection(stream);
+        handle_connection(stream)?;
     }
     Ok(())
 }
 
 // handler takes the connection stream and wraps it in a buffer
 // the buffered data is read line by line and collected into a vector using .collect()
-fn handle_connection(stream: TcpStream) {
+fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     let buf_reader = BufReader::new(&stream);
     let http_request: Vec<String> = buf_reader
         .lines()
-        .map(|result| result.unwrap()) // should try not to panic here, ideally handle gracefully
+        .map(|result| match result {
+            Ok(v) => v,
+            Err(e) => panic!("ERROR: failed to read line {e}"),
+        }) 
         .take_while(|line| !line.is_empty())
         .collect();
 
-    println!("Request: {http_request:#?}");
+    let status_line = "HTTP/1.1 200 OK";
+    let contents = fs::read_to_string("rust.html")?;
+    let length = contents.len();
+
+    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+    println!("HTTP Response: {http_request:#?}");
+    stream.write_all(response.as_bytes())?; 
+    
+    Ok(())
 }
