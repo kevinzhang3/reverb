@@ -22,32 +22,32 @@ fn main() -> std::io::Result<()> {
     for stream in listener.incoming() {
         let stream = stream?;
         
-        handle_connection(stream)?;
+        router(stream)?;
     }
     Ok(())
 }
 
 // handler takes the connection stream and wraps it in a buffer
 // the buffered data is read line by line and collected into a vector using .collect()
-fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
+fn router(mut stream: TcpStream) -> std::io::Result<()> {
     let buf_reader = BufReader::new(&stream);
-    let request_line = match buf_reader.lines().next() {
+    let request = match buf_reader.lines().next() {
         Some(line) => line,
         None => panic!("ERROR: failed to parse http request"),
     }?;
 
-    let (status_line, filename) = if request_line == "GET / HTTP/1.1" {
-        ("HTTP/1.1 200 OK", "rust.html")
-    } else {
-        ("HTTP/1.1 404 NOT FOUND", "404.html")
+    let (status, filename) = match request.split_whitespace().nth(1).unwrap_or("/") {
+        "/" => ("HTTP/1.1 200 OK", "rust.html"), // replace these with functions based on URI
+        _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
     };
-
+    
     let contents = fs::read_to_string(filename)?;
     let length = contents.len();
     let response = format!(
-        "{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}"
+        "{status}\r\nContent-Length: {length}\r\n\r\n{contents}"
     );
     stream.write_all(response.as_bytes())?;
-    
+
     Ok(())
 }
+
