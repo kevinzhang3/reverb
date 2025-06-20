@@ -21,8 +21,10 @@ fn main() -> std::io::Result<()> {
     // which is passed to the handler 
     for stream in listener.incoming() {
         let stream = stream?;
-        
-        router(stream)?;
+        match router(stream) {
+            Ok(v) => println!("Handled request: {:#?}", v),
+            Err(e) => println!("ERROR: Bad request: {e}"),
+        }
     }
     Ok(())
 }
@@ -31,16 +33,18 @@ fn main() -> std::io::Result<()> {
 // the buffered data is read line by line and collected into a vector using .collect()
 fn router(mut stream: TcpStream) -> std::io::Result<()> {
     let buf_reader = BufReader::new(&stream);
+    
     let request = match buf_reader.lines().next() {
-        Some(line) => line,
-        None => panic!("ERROR: failed to parse http request"),
-    }?;
+        Some(Ok(line)) => line,
+        Some(Err(e)) => return Err(e.into()), // propagate the I/O error
+        None => return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "No input received").into()),
+    };
 
     let (status, filename) = match request.split_whitespace().nth(1).unwrap_or("/") {
         "/" => ("HTTP/1.1 200 OK", "rust.html"), // replace these with functions based on URI
         _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
     };
-    
+
     let contents = fs::read_to_string(filename)?;
     let length = contents.len();
     let response = format!(
