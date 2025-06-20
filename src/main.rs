@@ -31,7 +31,7 @@ fn main() -> std::io::Result<()> {
 
 // handler takes the connection stream and wraps it in a buffer
 // the buffered data is read line by line and collected into a vector using .collect()
-fn router(mut stream: TcpStream) -> std::io::Result<()> {
+fn router(mut stream: TcpStream) -> Result<&'static str, std::io::Error> {
     let buf_reader = BufReader::new(&stream);
     
     let request = match buf_reader.lines().next() {
@@ -52,6 +52,6 @@ fn router(mut stream: TcpStream) -> std::io::Result<()> {
     );
     stream.write_all(response.as_bytes())?;
 
-    Ok(())
+    Ok(status)
 }
 
