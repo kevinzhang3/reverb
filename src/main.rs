@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::io;
 
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};
@@ -26,8 +27,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             match event.token() {
                 SERVER => {
                     let connection = match server.accept() {
-                        Ok(addr) => println!("new client: {addr:?}"),
-                        Err(e) => println!("couldn't get client: {e:?}")
+                        Ok(addr) => {
+                            println!("new client: {addr:?}");
+                        },
+                        Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                            println!("no events pending");
+                        },
+                        Err(e) => {
+                            println!("error: {e:?}");
+                        },
                     };
                     
                 }
@@ -35,4 +43,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
+}
+
+// we want to give this function ownership of the stream, because after a stream
+// is handled, we should drop it. (server should not keep a reference)
+fn handler (mut stream: TcpStream) -> Result<&'static str, std::io::Error> {
+    let buf_reader
+
+    Ok("good")
 }
