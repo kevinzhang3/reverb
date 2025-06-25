@@ -15,6 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut server = TcpListener::bind(addr)?;
     poll.registry().register(&mut server, SERVER, Interest::READABLE)?;
 
+    println!("Server started.");
     loop {
         poll.poll(&mut events, None)?;
 
@@ -24,8 +25,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             // match it based on the provided token 
             match event.token() {
                 SERVER => {
-                    let connection = server.accept()?;
-                    drop(connection);
+                    let connection = match server.accept() {
+                        Ok(addr) => println!("new client: {addr:?}"),
+                        Err(e) => println!("couldn't get client: {e:?}")
+                    };
+                    
                 }
                 _ => unreachable!(),
             }
