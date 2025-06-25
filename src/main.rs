@@ -5,7 +5,6 @@ use mio::{Events, Interest, Poll, Token};
 
 
 const SERVER: Token = Token(0);
-const CLIENT: Token = Token(1);
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut poll = Poll::new()?;
@@ -16,9 +15,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut server = TcpListener::bind(addr)?;
     poll.registry().register(&mut server, SERVER, Interest::READABLE)?;
 
-    let mut client = TcpStream::connect(addr)?;
-    poll.registry().register(&mut client, CLIENT, Interest::READABLE | Interest::WRITABLE)?;
-
     loop {
         poll.poll(&mut events, None)?;
 
@@ -28,19 +24,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             // match it based on the provided token 
             match event.token() {
                 SERVER => {
-                    let connection = server.accept();
+                    let connection = server.accept()?;
                     drop(connection);
-                }
-                CLIENT => {
-                    if event.is_writable() {
-                        // write stuff
-                    }
-
-                    if event.is_readable() {
-                        // read stuff 
-                    }
-
-                    return Ok(());
                 }
                 _ => unreachable!(),
             }
