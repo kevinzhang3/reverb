@@ -1,9 +1,13 @@
-use tokio::{
-    net::{TcpListener, TcpStream},
-    io::{AsyncReadExt, AsyncWriteExt},
-};
+use std::convert::Infallible;
+use std::net::SocketAddr;
 
-const BUFFER_SIZE: usize = 8192;
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::{Request, Response};
+use hyper_util::rt::TokioIo;
+use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -11,31 +15,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         let (mut stream, _) = listener.accept().await?;
+
+        let io = TokioIo::new(stream);
+
+        tokio::task::spawn(async move {
+            if let Err(err) = http1::Builder::new()
+                .serve_connection(io, service_fn(router))
+                .await
+            {
+                eprint!("Error serving connection: {:?}", err);
+            }
+        });
     }
 }
 
-async fn router(mut stream: TcpStream) {
-    let mut buf = [0u8; BUFFER_SIZE];
-
-    loop {
-        let n = match stream.read(&mut buf).await {
-            Ok(0) => return,
-            Ok(n) => n,
-            Err(e) => {
-                eprintln!("failed to read from socket; err = {:?}", e);
-                return;
-            }
-        };
-        if let Ok(s) = std::str::from_utf8(&buf[..n]) {
-            println!("Received: {}", s);
-        } else {
-            println!("Received (non-UTF8): {:?}", &buf[..n]);
-        }
-
-        if let Err(e) = stream.write_all(&buf[0..n]).await {
-            eprintln!("failed to write to socket; err = {:?}", e);
-            return;
-        }
-    }
-
+async fn router(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
+    Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
 }
