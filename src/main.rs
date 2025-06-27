@@ -2,7 +2,6 @@ use std::{
     error::Error,
     fs,
     io::{BufReader, prelude::*},
-    net::SocketAddr,
 };
 use mio::{
     net::{TcpListener, TcpStream},
