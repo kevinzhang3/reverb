@@ -4,7 +4,7 @@ use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{Request, Response};
+use hyper::{Error, Request, Response};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 
@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-async fn router(request: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
+async fn router(request: Request<hyper::body::Incoming>) -> hyper::Result<Response<Full<Bytes>>> {
     eprint!("Request: {:#?}", request);
 
     let response = match request.uri().path() {
@@ -45,4 +45,12 @@ async fn router(request: Request<hyper::body::Incoming>) -> Result<Response<Full
     };
 
     Ok(response)
+}
+
+fn base_uri() {
+
+}
+
+fn not_found() {
+
 }
