@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
 
     loop {
-        let (mut stream, _) = listener.accept().await?;
+        let (stream, _) = listener.accept().await?;
 
         let io = TokioIo::new(stream);
 
@@ -36,15 +36,13 @@ async fn router(request: Request<hyper::body::Incoming>) -> Result<Response<Full
         "/" => Response::builder()
             .status(200)
             .header("foo", "bar")
-            .body(fs::read_to_string("rust.html"))
+            .body(Full::new(Bytes::from(fs::read_to_string("rust.html").unwrap())))
             .unwrap(),
         _ => Response::builder()
             .status(404)
-            .body(fs::read_to_string("404.html"))
+            .body(Full::new(Bytes::from(fs::read_to_string("404.html").unwrap())))
             .unwrap()
     };
 
-
-
-    Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
+    Ok(response)
 }
