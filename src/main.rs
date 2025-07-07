@@ -1,15 +1,15 @@
-use std::convert::Infallible;
 use std::fs;
 use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{Error, Request, Response};
+use hyper::{Request, Response};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
+use anyhow::Result;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
 
     loop {
@@ -47,8 +47,10 @@ async fn router(request: Request<hyper::body::Incoming>) -> hyper::Result<Respon
     Ok(response)
 }
 
-fn base_uri() {
-
+fn base_uri() -> Result<Response<Full<Bytes>>> {
+    let response = Response::builder()
+        .status(200)
+        .body(Bytes::from(fs::read_to_string("rust.html")?));
 }
 
 fn not_found() {
