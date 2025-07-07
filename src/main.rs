@@ -3,10 +3,10 @@ use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{Request, Response};
+use hyper::http::{Request, Response};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
-use anyhow::Result;
+use anyhow::{Result, Context};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -48,11 +48,18 @@ async fn router(request: Request<hyper::body::Incoming>) -> hyper::Result<Respon
 }
 
 fn base_uri() -> Result<Response<Full<Bytes>>> {
+    let contents = fs::read_to_string("rust.html")
+        .context("Failed to read HTML")?;
+    let body = Full::new(Bytes::from(contents));
+
     let response = Response::builder()
         .status(200)
-        .body(Bytes::from(fs::read_to_string("rust.html")?));
+        .body(body)
+        .context("Failed to build response")?;
+    
+    Ok(response)
 }
 
 fn not_found() {
-
+    let contents = fs::read_to_string("404.html")
 }
