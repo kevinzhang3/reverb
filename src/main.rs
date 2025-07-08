@@ -7,7 +7,9 @@ mod handlers;
 async fn main() -> Result<()> {
     let mut router = router::Router::new();
 
-    router.GET("/", handlers::base_uri);
+    router.method_get("/", handlers::base_uri);
+
+    router.start("127.0.0.1:8080").await?;
 
     Ok(())
 }

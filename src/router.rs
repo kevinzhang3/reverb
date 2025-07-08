@@ -2,13 +2,14 @@ use futures::future::BoxFuture;
 use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::http::{Request, Response};
-use anyhow::Result;
+use anyhow::{Result, Context};
 use std::collections::HashMap;
 use tokio::net::TcpListener;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use std::sync::Arc;
 use hyper_util::rt::TokioIo;
+use tokio::fs;
 
 pub type Handler = fn(request: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
 
@@ -23,7 +24,7 @@ impl Router {
         }
     }
 
-    pub fn GET(&mut self, path: &str, handler: Handler) {
+    pub fn method_get(&mut self, path: &str, handler: Handler) {
         self.get_map.insert(path.to_string(), handler);
     }
 
@@ -46,7 +47,7 @@ impl Router {
                                 .serve_connection(io, service_fn(move |req| clone.handle(req)))
                                 .await
                         {
-                            eprintln!("Error serving connection: {:?}", err);
+                            eprintln!("Error serving connection: {:#?}", err);
                         }
                     });
                 }
@@ -64,16 +65,22 @@ impl Router {
     }
 
     fn handle(&self, req: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
-        eprintln!("Request: {:?}", req);
+        eprintln!("Request: {:#?}", req);
 
         if let Some(handler) = self.get_map.get(req.uri().path()) {
             handler(req)
         } else {
             Box::pin(async {
-                Ok(Response::builder()
+                let contents = fs::read_to_string("404.html").await
+                    .context("Failed to read HTML")?;
+                let body = Full::new(Bytes::from(contents));
+
+                let response = Response::builder()
                     .status(404)
-                    .body(Full::new(Bytes::from("Not Found")))
-                    .unwrap())
+                    .body(body)
+                    .context("Failed to build response")?;
+
+                Ok(response)
             })
         } 
     }
