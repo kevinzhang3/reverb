@@ -85,11 +85,9 @@ impl Router {
         };
 
         for (mount_url, dir) in &self.static_mounts {
-            if path.starts_with(mount_url) {
                 let subpath = &path[mount_url.len()..];
                 let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
                 return serve_static_file(fs_path);
-            }
         }
 
         if let Some(handler) = self.get_map.get(path) {
