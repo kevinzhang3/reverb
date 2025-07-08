@@ -10,24 +10,35 @@ use hyper::service::service_fn;
 use std::sync::Arc;
 use hyper_util::rt::TokioIo;
 use tokio::fs;
+use crate::handlers::serve_static_file;
 
+// for fn pointer mapping 
 pub type Handler = fn(request: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
 
+// map GET requests to their handlers 
 pub struct Router {
     get_map: HashMap<String, Handler>, 
+    static_mounts: Vec<(String, String)>,
 }
 
 impl Router {
     pub fn new() -> Self {
         Self {
             get_map: HashMap::new(),
+            static_mounts: Vec::new(),
         }
     }
 
+    pub fn serve_static(&mut self, mount_path: &str, dir: &str) {
+        self.static_mounts.push((mount_path.to_string(), dir.to_string()));
+    }
+
+    // insert into map 
     pub fn method_get(&mut self, path: &str, handler: Handler) {
         self.get_map.insert(path.to_string(), handler);
     }
 
+    // start the server 
     pub async fn start(self, port: &str) -> Result<()> {
         let router = std::sync::Arc::new(self);
 
@@ -64,12 +75,27 @@ impl Router {
         Ok(())
     }
 
+    // this calls the handler functions 
     fn handle(&self, req: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
         eprintln!("Request: {:#?}", req);
 
-        if let Some(handler) = self.get_map.get(req.uri().path()) {
+        let path = match req.uri().path() {
+            "/" => "/index.html",
+            v => v,
+        };
+
+        for (mount_url, dir) in &self.static_mounts {
+            if path.starts_with(mount_url) {
+                let subpath = &path[mount_url.len()..];
+                let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
+                return serve_static_file(fs_path);
+            }
+        }
+
+        if let Some(handler) = self.get_map.get(path) {
             handler(req)
         } else {
+            // 404
             Box::pin(async {
                 let contents = fs::read_to_string("404.html").await
                     .context("Failed to read HTML")?;
