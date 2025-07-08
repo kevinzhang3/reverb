@@ -2,15 +2,14 @@ use futures::future::BoxFuture;
 use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::http::{Request, Response};
-use anyhow::{Result, Context};
+use anyhow::Result;
 use std::collections::HashMap;
 use tokio::net::TcpListener;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use std::sync::Arc;
 use hyper_util::rt::TokioIo;
-use tokio::fs;
-use crate::handlers::serve_static_file;
+use crate::handlers;
 
 // for fn pointer mapping 
 pub type Handler = fn(request: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
@@ -24,6 +23,7 @@ pub struct Router {
 impl Router {
     pub fn new() -> Self {
         Self {
+            // post and delete maps next
             get_map: HashMap::new(),
             static_mounts: Vec::new(),
         }
@@ -83,29 +83,22 @@ impl Router {
             "/" => "/index.html",
             v => v,
         };
-
-        for (mount_url, dir) in &self.static_mounts {
-                let subpath = &path[mount_url.len()..];
-                let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
-                return serve_static_file(fs_path);
+       
+        // rest api handles
+        if let Some(handler) = self.get_map.get(path) {
+            return handler(req);
         }
 
-        if let Some(handler) = self.get_map.get(path) {
-            handler(req)
-        } else {
-            // 404
-            Box::pin(async {
-                let contents = fs::read_to_string("404.html").await
-                    .context("Failed to read HTML")?;
-                let body = Full::new(Bytes::from(contents));
+        // static file fallback 
+        for (mount_url, dir) in &self.static_mounts {
+            if path.starts_with(mount_url) {
+                let subpath = &path[mount_url.len()..];
+                let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
+                return handlers::serve_static_file(fs_path);
+            }
+        }
 
-                let response = Response::builder()
-                    .status(404)
-                    .body(body)
-                    .context("Failed to build response")?;
-
-                Ok(response)
-            })
-        } 
+        // 404 fallback
+        handlers::not_found()
     }
 }
