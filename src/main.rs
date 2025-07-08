@@ -13,11 +13,17 @@ mod router;
 // default runtime uses the N threads where N = num of cores
 #[tokio::main]
 async fn main() -> Result<()> {
-    
-    let mut r = router::Router::new();
+    let mut router = router::Router::new();
 
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
-    println!("Server running on http://127.0.0.1:8080");
+    server("127.0.0.1:8080").await?;
+
+    Ok(())
+}
+
+
+async fn server(port: &str) -> Result<()> {
+    let listener = TcpListener::bind(port).await?;
+    println!("Server running on http://{}", port);
 
     tokio::select! {
         _ = async {
@@ -28,7 +34,7 @@ async fn main() -> Result<()> {
                 tokio::task::spawn(async move {
                     if let Err(err) = http1::Builder::new()
                         .keep_alive(true)
-                        .serve_connection(io, service_fn(router))
+                        .serve_connection(io, service_fn(serve))
                         .await
                     {
                         eprintln!("Error serving connection: {:?}", err);
@@ -48,7 +54,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn router(request: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>> {
+async fn serve(request: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>> {
     eprintln!("{:#?}", request);
 
     let response = match request.uri().path() {
