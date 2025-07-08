@@ -37,24 +37,21 @@ async fn main() -> Result<()> {
         } => {},
 
         _ = tokio::signal::ctrl_c() => {
-            println!("Shutting down.");
+            println!("\nShutting down.");
         }
     }
 
     Ok(())
 }
-async fn router(request: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>> {
-    eprintln!("Request: {:#?}", request);
 
-    let start = Instant::now(); 
-    
+async fn router(request: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>> {
+    eprintln!("{:#?}", request);
+
     let response = match request.uri().path() {
         "/" => base_uri().await?,
         _ => not_found().await?
     };
 
-    let duration = start.elapsed();
-    
     eprintln!(
         "Handled {} in {:.2?}",
         request.uri().path(),
