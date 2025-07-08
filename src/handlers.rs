@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
 use http_body_util::Full;
 use hyper::body::Bytes;
-use hyper::http::Response;
+use hyper::http::{Request, Response};
 use tokio::fs;
+use hyper::body::Incoming;
 use futures::future::{BoxFuture, FutureExt};
 
 
@@ -40,3 +41,20 @@ pub fn serve_static_file(path: String) -> BoxFuture<'static, Result<Response<Ful
     }.boxed()
 }
 
+pub fn get_json(_req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+    async move {
+        
+        let json_data = r#"{
+            "message": "GET: JSON API TEST",
+            "status": 200,
+            "items": [1, 2, 3]
+        }"#;
+
+        let response = Response::builder()
+            .status(200)
+            .header("Content-Type", "application/json")
+            .body(Full::new(Bytes::from(json_data)))?;
+
+        Ok(response)
+    }.boxed()
+}
