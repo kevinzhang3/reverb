@@ -7,11 +7,15 @@ use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use anyhow::{Result, Context};
 use tokio::fs;
-use std::time::Instant;
+mod router;
+
 
 // default runtime uses the N threads where N = num of cores
 #[tokio::main]
 async fn main() -> Result<()> {
+    
+    let mut r = router::Router::new();
+
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
     println!("Server running on http://127.0.0.1:8080");
 
@@ -51,12 +55,6 @@ async fn router(request: Request<hyper::body::Incoming>) -> Result<Response<Full
         "/" => base_uri().await?,
         _ => not_found().await?
     };
-
-    eprintln!(
-        "Handled {} in {:.2?}",
-        request.uri().path(),
-        duration
-    );
 
     Ok(response)
 }
