@@ -15,6 +15,7 @@ pub fn not_found() -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
         let body = Full::new(Bytes::from(contents));
 
         let response = Response::builder()
+            .header("Content-Type", "text/html")
             .status(404)
             .body(body)
             .context("Failed to build response")?;
