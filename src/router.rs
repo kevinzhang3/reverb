@@ -13,33 +13,18 @@ use hyper_util::rt::TokioIo;
 pub type Handler = fn(request: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
 
 pub struct Router {
-    routes: HashMap<String, Handler>, 
+    get_map: HashMap<String, Handler>, 
 }
 
 impl Router {
     pub fn new() -> Self {
         Self {
-            routes: HashMap::new(),
+            get_map: HashMap::new(),
         }
     }
 
-    pub fn add(&mut self, path: &str, handler: Handler) {
-        self.routes.insert(path.to_string(), handler);
-    }
-
-    pub fn handle(&self, req: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
-        eprintln!("Request: {:?}", req);
-
-        if let Some(handler) = self.routes.get(req.uri().path()) {
-            handler(req)
-        } else {
-            Box::pin(async {
-                Ok(Response::builder()
-                    .status(404)
-                    .body(Full::new(Bytes::from("Not Found")))
-                    .unwrap())
-            })
-        } 
+    pub fn GET(&mut self, path: &str, handler: Handler) {
+        self.get_map.insert(path.to_string(), handler);
     }
 
     pub async fn start(self, port: &str) -> Result<()> {
@@ -76,5 +61,20 @@ impl Router {
         }
 
         Ok(())
+    }
+
+    fn handle(&self, req: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+        eprintln!("Request: {:?}", req);
+
+        if let Some(handler) = self.get_map.get(req.uri().path()) {
+            handler(req)
+        } else {
+            Box::pin(async {
+                Ok(Response::builder()
+                    .status(404)
+                    .body(Full::new(Bytes::from("Not Found")))
+                    .unwrap())
+            })
+        } 
     }
 }
