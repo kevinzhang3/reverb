@@ -17,6 +17,7 @@ pub type Handler = fn(request: Request<hyper::body::Incoming>) -> BoxFuture<'sta
 // map GET requests to their handlers 
 pub struct Router {
     get_map: HashMap<String, Handler>, 
+    post_map: HashMap<String, Handler>, 
     static_mounts: Vec<(String, String)>,
 }
 
@@ -25,6 +26,7 @@ impl Router {
         Self {
             // post and delete maps next
             get_map: HashMap::new(),
+            post_map: HashMap::new(),
             static_mounts: Vec::new(),
         }
     }
