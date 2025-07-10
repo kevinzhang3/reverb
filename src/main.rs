@@ -1,7 +1,8 @@
 use anyhow::Result;
+use reverb::{
+    routing::{handlers, router},
+};
 
-mod router;
-mod handlers;
 
 #[tokio::main]
 async fn main() -> Result<()> {

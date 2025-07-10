@@ -1,7 +1,10 @@
 [package]
-name = "http_server"
+name = "reverb"
 version = "0.1.0"
 edition = "2024"
+
+[lib]
+crate-type = ["rlib"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
