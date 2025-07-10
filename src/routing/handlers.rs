@@ -42,7 +42,7 @@ pub fn serve_static_file(path: String) -> BoxFuture<'static, Result<Response<Ful
     }.boxed()
 }
 
-pub fn get_json(_req: &Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+pub fn get_json(_req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
     async move {
         
         let json_data = r#"{

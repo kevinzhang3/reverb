@@ -1,5 +1,4 @@
-use std::pin::Pin;
-use futures::future::BoxFuture;
+use futures::future::{BoxFuture, FutureExt};
 use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::http::{Request, Response};
@@ -13,7 +12,7 @@ use hyper_util::rt::TokioIo;
 use super::handlers;
 
 // for fn pointer mapping 
-pub type Handler = fn(request: &Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
+pub type Handler = fn(request: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
 
 // map GET requests to their handlers 
 pub struct Router {
@@ -43,7 +42,7 @@ impl Router {
 
     // start the server 
     pub async fn start(self, port: &str) -> Result<()> {
-        let router = std::sync::Arc::new(self);
+        let router = Arc::new(self);
 
         let listener = TcpListener::bind(port).await?;
         println!("Server running on http://{}", port);
@@ -56,39 +55,40 @@ impl Router {
             tokio::task::spawn(async move {
                 let conn = http1::Builder::new()
                     .keep_alive(true)
-                    .serve_connection(io, service_fn(move |req| clone.handle(req)))
+                    .serve_connection(io, service_fn(|req| clone.handle(req)))
                     .await;
                 });
         }
     }
 
     // this calls the handler functions 
-    fn handle(&self, req: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+    fn handle(self: Arc<Self>, req: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+        async move {
+            let path = match req.uri().path() {
+                "/" => "/index.html",
+                v => v,
+            };
 
-        let path = match req.uri().path() {
-            "/" => "/index.html",
-            v => v,
-        };
-
-        // rest api handles
-        if let Some(handler) = self.get_map.get(path) {
-            let resp = handler(&req);
+            // rest api handles
+            if let Some(handler) = self.get_map.get(path) {
+                let resp = handler(req).await;
 
 
 
-            return resp;
-        }
-
-        // static file fallback 
-        for (mount_url, dir) in &self.static_mounts {
-            if path.starts_with(mount_url) {
-                let subpath = &path[mount_url.len()..];
-                let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
-                return handlers::serve_static_file(fs_path);
+                return resp;
             }
-        }
 
-        // 404 fallback
-        handlers::not_found()
+            // static file fallback 
+            for (mount_url, dir) in &self.static_mounts {
+                if path.starts_with(mount_url) {
+                    let subpath = &path[mount_url.len()..];
+                    let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
+                    return handlers::serve_static_file(fs_path).await;
+                }
+            }
+
+            // 404 fallback
+            handlers::not_found().await
+        }.boxed()
     }
 }
