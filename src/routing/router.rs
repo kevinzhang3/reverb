@@ -1,3 +1,4 @@
+use std::pin::Pin;
 use futures::future::BoxFuture;
 use http_body_util::Full;
 use hyper::body::Bytes;
@@ -12,7 +13,7 @@ use hyper_util::rt::TokioIo;
 use super::handlers;
 
 // for fn pointer mapping 
-pub type Handler = fn(request: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
+pub type Handler = fn(request: &Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
 
 // map GET requests to their handlers 
 pub struct Router {
@@ -47,48 +48,35 @@ impl Router {
         let listener = TcpListener::bind(port).await?;
         println!("Server running on http://{}", port);
 
-        tokio::select! {
-            _ = async {
-                loop {
-                    let (stream, _) = listener.accept().await?;
-                    let io = TokioIo::new(stream);
-                    let clone = Arc::clone(&router);
+        loop {
+            let (stream, _) = listener.accept().await?;
+            let io = TokioIo::new(stream);
+            let clone = Arc::clone(&router);
 
-                    tokio::task::spawn(async move {
-                        if let Err(err) = http1::Builder::new()
-                            .keep_alive(true)
-                                .serve_connection(io, service_fn(move |req| clone.handle(req)))
-                                .await
-                        {
-                            eprintln!("Error serving connection: {:#?}", err);
-                        }
-                    });
-                }
-
-                #[allow(unreachable_code)]
-                Ok::<_, anyhow::Error>(())
-            } => {},
-
-            _ = tokio::signal::ctrl_c() => {
-                println!("\nShutting down.");
-            }
+            tokio::task::spawn(async move {
+                let conn = http1::Builder::new()
+                    .keep_alive(true)
+                    .serve_connection(io, service_fn(move |req| clone.handle(req)))
+                    .await;
+                });
         }
-
-        Ok(())
     }
 
     // this calls the handler functions 
     fn handle(&self, req: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
-        eprintln!("Request: {:#?}", req);
 
         let path = match req.uri().path() {
             "/" => "/index.html",
             v => v,
         };
-       
+
         // rest api handles
         if let Some(handler) = self.get_map.get(path) {
-            return handler(req);
+            let resp = handler(&req);
+
+
+
+            return resp;
         }
 
         // static file fallback 
