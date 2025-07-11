@@ -1,6 +1,6 @@
 use futures::future::{BoxFuture, FutureExt};
 use http_body_util::Full;
-use hyper::body::Bytes;
+use hyper::body::{Incoming, Bytes};
 use hyper::http::{Request, Response};
 use anyhow::Result;
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ use hyper_util::rt::TokioIo;
 use super::handlers;
 
 // for fn pointer mapping 
-pub type Handler = fn(request: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
+pub type Handler = fn(request: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
 
 // map GET requests to their handlers 
 pub struct Router {
@@ -53,18 +53,21 @@ impl Router {
             let clone = Arc::clone(&router);
 
             tokio::task::spawn(async move {
-                let conn = http1::Builder::new()
+               if let Err(e) = http1::Builder::new()
                     .keep_alive(true)
                     .serve_connection(io, service_fn(move |req| {
                         let router = Arc::clone(&clone);
                         router.handle(req)
-                    })).await;
-                });
+                    })).await
+               {
+                    eprintln!("ERR: {:#?}", e);
+               }
+            });
         }
     }
 
     // this calls the handler functions 
-    fn handle(self: Arc<Self>, req: Request<hyper::body::Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+    fn handle(self: Arc<Self>, req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
         async move {
             let path = match req.uri().path() {
                 "/" => "/index.html",
@@ -75,7 +78,7 @@ impl Router {
             if let Some(handler) = self.get_map.get(path) {
                 let resp = handler(req).await;
 
-
+                
 
                 return resp;
             }
