@@ -2,7 +2,7 @@ use futures::future::{BoxFuture, FutureExt};
 use http_body_util::Full;
 use hyper::body::{Incoming, Bytes};
 use hyper::http::{Request, Response};
-use anyhow::Result;
+use anyhow::{anyhow, Error, Result};
 use tracing_subscriber::EnvFilter;
 use std::collections::HashMap;
 use tokio::net::TcpListener;
@@ -99,7 +99,8 @@ impl Router {
             }
 
             // 404 fallback
-            handlers::not_found(req).await
+            let err: Error = anyhow!("ERR: INVALID URI");
+            handlers::not_found(req, err.into()).await
         }.boxed()
     }
 }
