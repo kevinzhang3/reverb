@@ -76,10 +76,11 @@ impl Router {
 
             // rest api handles
             if let Some(handler) = self.get_map.get(path) {
-                let resp = handler(req).await;
-
+                eprint!("REQ: {:#?} {:#?} | ", req.method(), req.uri());
                 
-
+                let resp = handler(req)
+                    .await
+                    .inspect(|resp| eprintln!("RESP: {:#?} {:#?}", resp.status(), resp.version()));
                 return resp;
             }
 
@@ -88,12 +89,15 @@ impl Router {
                 if path.starts_with(mount_url) {
                     let subpath = &path[mount_url.len()..];
                     let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
-                    return handlers::serve_static_file(fs_path).await;
+                    
+                    let resp = handlers::serve_static_file(fs_path)
+                        .await;
+                    return resp;
                 }
             }
 
             // 404 fallback
-            handlers::not_found().await
+            handlers::not_found(req)
         }.boxed()
     }
 }

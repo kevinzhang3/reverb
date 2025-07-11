@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use http_body_util::Full;
 use hyper::body::{Bytes, Incoming};
 use hyper::http::{Request, Response};
@@ -6,19 +6,18 @@ use tokio::fs;
 use futures::future::{BoxFuture, FutureExt};
 
 
-pub fn not_found() -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+pub fn not_found(req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
     async move {
-        let contents = fs::read_to_string("public/404.html")
-            .await
-            .context("Failed to read HTML")?;
-        let body = Full::new(Bytes::from(contents));
+        eprint!("REQ: {:#?} {:#?}", req.method(), req.uri());
+        let json_data = r#"{
+            "message": "Not found",
+            "status": 404,
+        }"#;
 
         let response = Response::builder()
-            .header("Content-Type", "text/html")
+            .header("Content-Type", "application/json")
             .status(404)
-            .body(body)
-            .context("Failed to build response")?;
-
+            .body(Full::new(Bytes::from(json_data)))?;
         Ok(response)
     }.boxed()
 }
