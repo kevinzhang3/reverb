@@ -4,7 +4,7 @@ use http_body_util::Full;
 use hyper::{body::Bytes, Response};
 use super::util::{DataFormat, HttpStatus};
 
-pub fn get_wrap<T>(response: (DataFormat, HttpStatus)) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+pub fn get_wrap(response: (DataFormat, HttpStatus)) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
     async move {
         let status = response.1.as_status_code();
         let wrap = match response.0 {
