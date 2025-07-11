@@ -3,6 +3,7 @@ use http_body_util::Full;
 use hyper::body::{Incoming, Bytes};
 use hyper::http::{Request, Response};
 use anyhow::Result;
+use tracing_subscriber::EnvFilter;
 use std::collections::HashMap;
 use tokio::net::TcpListener;
 use hyper::server::conn::http1;
@@ -17,7 +18,6 @@ pub type Handler = fn(request: Request<Incoming>) -> BoxFuture<'static, Result<R
 // map GET requests to their handlers 
 pub struct Router {
     get_map: HashMap<String, Handler>, 
-    post_map: HashMap<String, Handler>, 
     static_mounts: Vec<(String, String)>,
 }
 
@@ -26,7 +26,6 @@ impl Router {
         Self {
             // post and delete maps next
             get_map: HashMap::new(),
-            post_map: HashMap::new(),
             static_mounts: Vec::new(),
         }
     }
@@ -42,10 +41,16 @@ impl Router {
 
     // start the server 
     pub async fn start(self, port: &str) -> Result<()> {
+        
+        tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::new("info"))
+            .with_target(false)
+            .init();
+
         let router = Arc::new(self);
 
         let listener = TcpListener::bind(port).await?;
-        println!("Server running on http://{}", port);
+        tracing::info!("Server running on http://{}", port);
 
         loop {
             let (stream, _) = listener.accept().await?;
@@ -60,7 +65,7 @@ impl Router {
                         router.handle(req)
                     })).await
                {
-                    eprintln!("ERR: {:#?}", e);
+                    tracing::error!("ERR: {:#?}", e);
                }
             });
         }
@@ -72,11 +77,11 @@ impl Router {
 
             // rest api handles
             if let Some(handler) = self.get_map.get(req.uri().path()) {
-                eprint!("REQ: {:#?} {:#?} | ", req.method(), req.uri());
+                tracing::info!("REQ: {:#?} {:#?} | ", req.method(), req.uri());
                 
                 let resp = handler(req)
                     .await
-                    .inspect(|resp| eprintln!("RESP: {:#?} {:#?}", resp.status(), resp.version()));
+                    .inspect(|resp| tracing::info!("RESP: {:#?} {:#?}", resp.status(), resp.version()));
                 return resp;
             }
 
