@@ -10,6 +10,8 @@ async fn main() -> Result<()> {
 
     router.serve_static("/", "./public");
     router.method_get("/api", handlers::get_json);
+
+    router.debug(true);
     router.start("127.0.0.1:8080").await?;
 
     Ok(())

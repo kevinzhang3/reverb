@@ -17,6 +17,7 @@ pub type Handler = fn(request: Request<Incoming>) -> BoxFuture<'static, Result<R
 
 // map GET requests to their handlers 
 pub struct Router {
+    debug: bool,
     get_map: HashMap<String, Handler>, 
     static_mounts: Vec<(String, String)>,
 }
@@ -25,9 +26,14 @@ impl Router {
     pub fn new() -> Self {
         Self {
             // post and delete maps next
+            debug: false,
             get_map: HashMap::new(),
             static_mounts: Vec::new(),
         }
+    }
+
+    pub fn debug(&mut self, arg: bool) {
+        self.debug = arg;
     }
 
     pub fn serve_static(&mut self, mount_path: &str, dir: &str) {
@@ -41,16 +47,17 @@ impl Router {
 
     // start the server 
     pub async fn start(self, port: &str) -> Result<()> {
-        
-        tracing_subscriber::fmt()
-            .with_env_filter(EnvFilter::new("info"))
-            .with_target(false)
-            .init();
+        if self.debug { 
+            tracing_subscriber::fmt()
+                .with_env_filter(EnvFilter::new("info"))
+                .with_target(false)
+                .init();
+        }
 
         let router = Arc::new(self);
 
         let listener = TcpListener::bind(port).await?;
-        tracing::info!("Server running on http://{}", port);
+        eprintln!("Server running on http://{}", port);
 
         loop {
             let (stream, _) = listener.accept().await?;
@@ -58,15 +65,15 @@ impl Router {
             let clone = Arc::clone(&router);
 
             tokio::task::spawn(async move {
-               if let Err(e) = http1::Builder::new()
+                if let Err(e) = http1::Builder::new()
                     .keep_alive(true)
-                    .serve_connection(io, service_fn(move |req| {
-                        let router = Arc::clone(&clone);
-                        router.handle(req)
-                    })).await
-               {
+                        .serve_connection(io, service_fn(move |req| {
+                            let router = Arc::clone(&clone);
+                            router.handle(req)
+                        })).await
+                {
                     tracing::error!("ERR: {:#?}", e);
-               }
+                }
             });
         }
     }
@@ -77,11 +84,11 @@ impl Router {
 
             // rest api handles
             if let Some(handler) = self.get_map.get(req.uri().path()) {
-                tracing::info!("REQ: {:#?} {:#?} | ", req.method(), req.uri());
-                
+                tracing::info!("REQUEST: {:#?} {:#?}", req.method(), req.uri());
+
                 let resp = handler(req)
                     .await
-                    .inspect(|resp| tracing::info!("RESP: {:#?} {:#?}", resp.status(), resp.version()));
+                    .inspect(|resp| tracing::info!("RESPONSE: {:#?} {:#?}", resp.status(), resp.version()));
                 return resp;
             }
 

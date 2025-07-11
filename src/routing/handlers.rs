@@ -8,7 +8,7 @@ use futures::future::{BoxFuture, FutureExt};
 
 pub fn not_found(req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
     async move {
-        tracing::error!("REQ: {:#?} {:#?} | ", req.method(), req.uri());
+        tracing::error!("REQ: {:#?} {:#?}", req.method(), req.uri());
         let json_data = r#"{
             "message": "Not found",
             "status": 404,
