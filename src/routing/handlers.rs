@@ -8,7 +8,7 @@ use futures::future::{BoxFuture, FutureExt};
 
 pub fn not_found(req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
     async move {
-        tracing::error!("REQ: {:#?} {:#?}", req.method(), req.uri());
+        tracing::error!("REQ: {:#?}", req);
         let json_data = r#"{
             "message": "Not found",
             "status": 404,
@@ -36,7 +36,7 @@ pub fn serve_static_file(req: Request<Incoming>, mount_url: String, dir: String)
 
         match fs::read(&fs_path).await {
             Ok(data) => {
-                let mime = mime_guess::from_path(&path).first_or_octet_stream();
+                let mime = mime_guess::from_path(path).first_or_octet_stream();
                 let response = Response::builder()
                     .header("Content-Type", mime.to_string())
                     .status(200)
@@ -49,23 +49,4 @@ pub fn serve_static_file(req: Request<Incoming>, mount_url: String, dir: String)
         }
     }.boxed()
 }
-
-pub fn get_json(_req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
-    async move {
-        
-        let json_data = r#"{
-            "message": "GET: JSON API TEST",
-            "status": 200,
-            "items": [1, 2, 3]
-        }"#;
-
-        let response = Response::builder()
-            .status(200)
-            .header("Content-Type", "application/json")
-            .body(Full::new(Bytes::from(json_data)))?;
-
-        Ok(response)
-    }.boxed()
-}
-
 

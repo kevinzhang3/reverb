@@ -11,15 +11,13 @@ use hyper::service::service_fn;
 use std::sync::Arc;
 use hyper_util::rt::TokioIo;
 use super::handlers;
+use super::{Router, Handler};
 
 // for fn pointer mapping 
-pub type Handler = fn(request: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>>;
-
-// map GET requests to their handlers 
-pub struct Router {
-    debug: bool,
-    get_map: HashMap<String, Handler>, 
-    static_mounts: Vec<(String, String)>,
+impl Default for Router {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Router {
@@ -84,7 +82,7 @@ impl Router {
 
             // rest api handles
             if let Some(handler) = self.get_map.get(req.uri().path()) {
-                tracing::info!("REQUEST: {:#?} {:#?}", req.method(), req.uri());
+                tracing::info!("REQUEST: {:#?}", req);
 
                 let resp = handler(req)
                     .await
