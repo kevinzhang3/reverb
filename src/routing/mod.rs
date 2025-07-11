@@ -1,5 +1,6 @@
 pub mod handlers;
 pub mod router;
+pub mod not_found;
 
 use std::collections::HashMap;
 use hyper::{Request, Response};

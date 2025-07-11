@@ -1,27 +1,10 @@
-use anyhow::{Error, Result};
+use anyhow::Result;
 use http_body_util::Full;
 use hyper::body::{Bytes, Incoming};
 use hyper::http::{Request, Response};
 use tokio::fs;
 use futures::future::{BoxFuture, FutureExt};
-
-
-pub fn not_found(req: Request<Incoming>, err: Error) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
-    async move {
-        tracing::error!("REQ: {:#?} {:#?} | ERR: {:?}", req.method(), req.uri(), err);
-        let json_data = r#"{
-            "message": "Not found",
-            "status": 404,
-        }"#;
-
-        let resp = Response::builder()
-            .header("Content-Type", "application/json")
-            .status(404)
-            .body(Full::new(Bytes::from(json_data)))?;
-        tracing::error!("RESP: {:#?} {:#?}", resp.status(), resp.version());
-        Ok(resp)
-    }.boxed()
-}
+use super::not_found::not_found_response;
 
 pub fn serve_static_file(req: Request<Incoming>, mount_url: String, dir: String) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
     async move {
@@ -47,7 +30,7 @@ pub fn serve_static_file(req: Request<Incoming>, mount_url: String, dir: String)
                 Ok(response)
             },
             Err(e) => {
-                not_found(req, e.into()).await
+                not_found_response(req, e.into()).await
             }
         }
     }.boxed()

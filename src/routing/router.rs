@@ -12,6 +12,7 @@ use std::sync::Arc;
 use hyper_util::rt::TokioIo;
 use super::handlers;
 use super::{Router, Handler};
+use super::not_found::not_found_response;
 
 // for fn pointer mapping 
 impl Default for Router {
@@ -100,7 +101,7 @@ impl Router {
 
             // 404 fallback
             let err: Error = anyhow!("ERR: INVALID URI");
-            handlers::not_found(req, err.into()).await
+            not_found_response(req, err).await
         }.boxed()
     }
 }
