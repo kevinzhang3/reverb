@@ -69,13 +69,9 @@ impl Router {
     // this calls the handler functions 
     fn handle(self: Arc<Self>, req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
         async move {
-            let path = match req.uri().path() {
-                "/" => "/index.html",
-                v => v,
-            };
 
             // rest api handles
-            if let Some(handler) = self.get_map.get(path) {
+            if let Some(handler) = self.get_map.get(req.uri().path()) {
                 eprint!("REQ: {:#?} {:#?} | ", req.method(), req.uri());
                 
                 let resp = handler(req)
@@ -86,18 +82,14 @@ impl Router {
 
             // static file fallback 
             for (mount_url, dir) in &self.static_mounts {
+                let path = req.uri().path();
                 if path.starts_with(mount_url) {
-                    let subpath = &path[mount_url.len()..];
-                    let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
-                    
-                    let resp = handlers::serve_static_file(fs_path)
-                        .await;
-                    return resp;
+                    return handlers::serve_static_file(req, mount_url.to_string(), dir.to_string()).await;
                 }
             }
 
             // 404 fallback
-            handlers::not_found(req)
+            handlers::not_found(req).await
         }.boxed()
     }
 }
