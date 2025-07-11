@@ -31,9 +31,12 @@ pub fn serve_static_file(req: Request<Incoming>, mount_url: String, dir: String)
             v => v,
         };
         
+        let root = env!("CARGO_MANIFEST_DIR");
         let subpath = &path[mount_url.len()..];
-        let fs_path = format!("{}/{}", dir, subpath.trim_start_matches('/'));
+        let fs_path = format!("{}/{}/{}", root, dir, subpath.trim_start_matches('/'));
 
+
+        tracing::info!("FS_PATH : {:#?}", fs_path);
         match fs::read(&fs_path).await {
             Ok(data) => {
                 let mime = mime_guess::from_path(path).first_or_octet_stream();
