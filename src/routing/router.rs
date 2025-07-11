@@ -55,8 +55,10 @@ impl Router {
             tokio::task::spawn(async move {
                 let conn = http1::Builder::new()
                     .keep_alive(true)
-                    .serve_connection(io, service_fn(|req| clone.handle(req)))
-                    .await;
+                    .serve_connection(io, service_fn(move |req| {
+                        let router = Arc::clone(&clone);
+                        router.handle(req)
+                    })).await;
                 });
         }
     }
