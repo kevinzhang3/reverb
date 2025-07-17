@@ -1,7 +1,7 @@
 use anyhow::Result;
 use futures::{future::BoxFuture, FutureExt};
 use http_body_util::Full;
-use hyper::{body::Bytes, Response};
+use hyper::body::{Bytes, Response};
 use super::util::{DataFormat, HttpStatus};
 
 pub fn get_wrap(response: (DataFormat, HttpStatus)) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
