@@ -111,5 +111,16 @@ mod tests {
     use super::*;
     
     #[test]
+    fn constructor_test() {
+        let router = Router::new();
+        assert!(!router.debug);
+    }
+
+    #[test]
+    fn serve_static_test() {
+        let router = Router::new();
+        router.serve_static("test", "/");
+        assert_eq!(router.static_mounts.last(), ("test", "/"));
+    }
 
 }
