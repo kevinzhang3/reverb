@@ -118,9 +118,9 @@ mod tests {
 
     #[test]
     fn serve_static_test() {
-        let router = Router::new();
+        let mut router = Router::new();
         router.serve_static("test", "/");
-        assert_eq!(router.static_mounts.last(), ("test", "/"));
+        assert_eq!(router.static_mounts.last(), Some(&("test".to_string(), "/".to_string())));
     }
 
 }
