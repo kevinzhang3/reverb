@@ -5,20 +5,20 @@ use hyper::body::Bytes;
 use hyper::http::Response as HyperResponse;
 use super::util::{DataFormat, HttpStatus};
 
-pub fn build_response(format: DataFormat, status: HttpStatus, data: hyper::body::Bytes) -> BoxFuture<'static, Result<HyperResponse<Full<Bytes>>>> {
+pub fn build_response(context: Response) -> BoxFuture<'static, Result<HyperResponse<Full<Bytes>>>> {
     async move {
-        let response = match format {
-            DataFormat::JSON(_) => {
+        let response = match context.format {
+            DataFormat::JSON(body) => {
                 HyperResponse::builder()
                     .header("Content-Type", "application/json")
-                    .status(status.as_status_code())
-                    .body(Full::new(data))
+                    .status(context.status.as_status_code())
+                    .body(Full::new(Bytes::from(body)))
             },
-            DataFormat::XML(_) => {
+            DataFormat::XML(body) => {
                 HyperResponse::builder()
                     .header("Content-Type", "application/xml")
-                    .status(status.as_status_code())
-                    .body(Full::new(data))
+                    .status(context.status.as_status_code())
+                    .body(Full::new(Bytes::from(body)))
             },
         };
         Ok(response?)
@@ -28,15 +28,13 @@ pub fn build_response(format: DataFormat, status: HttpStatus, data: hyper::body:
 pub struct Response {
     status: HttpStatus,
     format: DataFormat,
-    body: String,
 }
 
 impl Response {
-    pub fn new(format: DataFormat, status: HttpStatus, body: String) -> Self {
+    pub fn new(format: DataFormat, status: HttpStatus) -> Self {
         Self {
             status: status,
             format: format,
-            body: body,
         }
     }
 
@@ -48,7 +46,4 @@ impl Response {
         self.format = format;
     }
     
-    pub fn set_data(&mut self, body: String) {
-        self.body = body;
-    }
 }

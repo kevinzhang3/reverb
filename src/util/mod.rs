@@ -1,8 +1,6 @@
-use hyper::body::Bytes;
-
 pub enum DataFormat {
-    JSON(Bytes),
-    XML(Bytes),
+    JSON(String),
+    XML(String),
 }
 
 pub enum HttpStatus {
