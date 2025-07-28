@@ -1,7 +1,7 @@
 use futures::future::{BoxFuture, FutureExt};
 use http_body_util::Full;
 use hyper::body::{Incoming, Bytes};
-use hyper::http::{Request, Response};
+use hyper::http::{Request, Response as HyperResponse};
 use anyhow::{anyhow, Error, Result};
 use tracing_subscriber::EnvFilter;
 use std::collections::HashMap;
@@ -82,15 +82,16 @@ impl Router {
     }
 
     // this calls the handler functions 
-    fn handle(self: Arc<Self>, req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
+    fn handle(self: Arc<Self>, req: Request<Incoming>) -> BoxFuture<'static, Result<HyperResponse<Full<Bytes>>>> {
         async move {
 
             // GET
             if let Some(handler) = self.get_map.get(req.uri().path()) {
-                tracing::info!("REQUEST: {:#?}", req);
-
-                let resp = handler(req);
-                return build_response(resp).await;
+                let uri = req.uri().path().to_string();
+                let resp = build_response(handler(req))
+                    .await
+                    .inspect(|resp| tracing::info!("GET: {:#?} {:#?} {:#?}", uri, resp.status(), resp.version()));
+                return resp;
             }
 
             // static file fallback 

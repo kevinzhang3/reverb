@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result, Error};
 use http_body_util::Full;
 use hyper::body::{Bytes, Incoming};
 use hyper::http::{Request, Response};
@@ -18,8 +18,6 @@ pub fn serve_static_file(req: Request<Incoming>, mount_url: String, dir: String)
         let subpath = &path[mount_url.len()..];
         let fs_path = format!("{}/{}/{}", root, dir, subpath.trim_start_matches('/'));
 
-
-        tracing::info!("FS_PATH : {:#?}", fs_path);
         match fs::read(&fs_path).await {
             Ok(data) => {
                 let mime = mime_guess::from_path(path).first_or_octet_stream();
@@ -29,8 +27,9 @@ pub fn serve_static_file(req: Request<Incoming>, mount_url: String, dir: String)
                     .body(Full::new(Bytes::from(data)))?;
                 Ok(response)
             },
-            Err(e) => {
-                not_found_response(req, e.into()).await
+            Err(_) => {
+                let err: Error = anyhow!("ERR: INVALID URI");
+                not_found_response(req, err).await
             }
         }
     }.boxed()
