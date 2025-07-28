@@ -10,9 +10,13 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use std::sync::Arc;
 use hyper_util::rt::TokioIo;
-use super::handlers;
-use super::{Router, Handler};
-use super::not_found::not_found_response;
+use super::{
+    handlers,
+    Router,
+    Handler,
+    not_found::not_found_response,
+    super::response::build_response,
+};
 
 // for fn pointer mapping 
 impl Default for Router {
@@ -40,7 +44,7 @@ impl Router {
     }
 
     // insert into map 
-    pub fn method_get(&mut self, path: &str, handler: Handler) {
+    pub fn get(&mut self, path: &str, handler: Handler) {
         self.get_map.insert(path.to_string(), handler);
     }
 
@@ -81,7 +85,7 @@ impl Router {
     fn handle(self: Arc<Self>, req: Request<Incoming>) -> BoxFuture<'static, Result<Response<Full<Bytes>>>> {
         async move {
 
-            // rest api handles
+            // GET
             if let Some(handler) = self.get_map.get(req.uri().path()) {
                 tracing::info!("REQUEST: {:#?}", req);
 
