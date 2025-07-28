@@ -89,10 +89,8 @@ impl Router {
             if let Some(handler) = self.get_map.get(req.uri().path()) {
                 tracing::info!("REQUEST: {:#?}", req);
 
-                let resp = handler(req)
-                    .await
-                    .inspect(|resp| tracing::info!("RESPONSE: {:#?} {:#?}", resp.status(), resp.version()));
-                return resp;
+                let resp = handler(req);
+                return build_response(resp).await;
             }
 
             // static file fallback 
