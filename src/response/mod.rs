@@ -38,12 +38,14 @@ impl Response {
         }
     }
 
-    pub fn set_status(&mut self, status: HttpStatus) {
+    pub fn set_status(mut self, status: HttpStatus) -> Self {
         self.status = status;
+        self
     }
     
-    pub fn set_format(&mut self, format: DataFormat) {
+    pub fn set_format(mut self, format: DataFormat) -> Self {
         self.format = format;
+        self
     }
     
 }
