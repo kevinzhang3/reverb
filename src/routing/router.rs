@@ -35,17 +35,20 @@ impl Router {
         }
     }
 
-    pub fn debug(&mut self, arg: bool) {
+    pub fn debug(mut self, arg: bool) -> Self {
         self.debug = arg;
+        self
     }
 
-    pub fn serve_static(&mut self, mount_path: &str, dir: &str) {
+    pub fn serve_static(mut self, mount_path: &str, dir: &str) -> Self {
         self.static_mounts.push((mount_path.to_string(), dir.to_string()));
+        self 
     }
 
     // insert into map 
-    pub fn get(&mut self, path: &str, handler: Handler) {
+    pub fn get(mut self, path: &str, handler: Handler) -> Self {
         self.get_map.insert(path.to_string(), handler);
+        self
     }
 
     // start the server 

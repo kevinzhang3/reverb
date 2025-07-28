@@ -10,10 +10,10 @@ fn greet(_req: hyper::Request<hyper::body::Incoming>) -> Response {
 
 #[tokio::main]
 async fn main() {
-    let mut router = Router::new();
+    let router = Router::new()
+        .serve_static("/", "public")
+        .get("/greet", greet)
+        .debug(true);
 
-    router.serve_static("/", "public");
-    router.get("/greet", greet);
-    router.debug(true);
     router.start("127.0.0.1:8080").await.unwrap();
 }
