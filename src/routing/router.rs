@@ -123,4 +123,5 @@ mod tests {
         assert_eq!(router.static_mounts.last(), Some(&("test".to_string(), "/".to_string())));
     }
 
+
 }
