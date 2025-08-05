@@ -1,6 +1,6 @@
-use reverb::{Router, Response, DataFormat, HttpStatus};
+use reverb::{Router, Response, Request, DataFormat, HttpStatus, body};
 
-fn greet(_req: hyper::Request<hyper::body::Incoming>) -> Response {
+fn greet(_req: Request<body::Incoming>) -> Response {
     return Response::new(DataFormat::JSON("Hello, world!".to_string()), HttpStatus::Ok); 
 }
 
