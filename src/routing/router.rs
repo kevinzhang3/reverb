@@ -12,12 +12,17 @@ use std::sync::Arc;
 use hyper_util::rt::TokioIo;
 use super::{
     handlers,
-    Router,
-    Handler,
     not_found::not_found_response,
-    super::response::build_response,
+    super::response::{Response, build_response},
 };
 
+pub type Handler = fn(request: Request<Incoming>) -> Response;
+
+pub struct Router {
+    debug: bool,
+    get_map: HashMap<String, Handler>, 
+    static_mounts: Vec<(String, String)>,
+}
 // for fn pointer mapping 
 impl Default for Router {
     fn default() -> Self {
