@@ -2,7 +2,7 @@
 
 Reverb is a simple web framework written in Rust. The goal is to provide an ergonomic and easy to understand API.
 
-## Getting Started
+## Example
 
 ```rust
 use reverb::{Router, Response, Request, DataFormat, HttpStatus, body};
