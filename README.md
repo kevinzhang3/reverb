@@ -14,7 +14,6 @@ fn greet(_req: Request<body::Incoming>) -> Response {
 #[tokio::main]
 async fn main() {
     let router = Router::new()
-        .serve_static("/", "public")
         .get("/greet", greet)
         .debug(true);
 
