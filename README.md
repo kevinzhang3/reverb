@@ -1,6 +1,6 @@
 # reverb
 
-Reverb is a simple web framework written in Rust. The goal is to provide an ergonomic and easy to understand API.
+Reverb is a minimal web framework that provides a router, server, and the ability to write custom endpoints. 
 
 ## Example
 
