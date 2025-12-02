@@ -15,14 +15,24 @@ use super::{
     not_found::not_found_response,
     super::response::{Response, build_response},
 };
+use std::future::Future;
+use std::pin::Pin;
 
-pub type Handler = fn(request: Request<Incoming>) -> Response;
+type BoxHandler = Box<
+    dyn Fn(Request<Incoming>) -> Pin<Box<dyn Future<Output = Response> + Send>>
+    + Send
+    + Sync
+>;
 
 pub struct Router {
     debug: bool,
-    get_map: HashMap<String, Handler>, 
+    get_map: HashMap<String, BoxHandler>,
+    post_map: HashMap<String, BoxHandler>,
     static_mounts: Vec<(String, String)>,
 }
+
+
+
 // for fn pointer mapping 
 impl Default for Router {
     fn default() -> Self {
@@ -33,9 +43,9 @@ impl Default for Router {
 impl Router {
     pub fn new() -> Self {
         Self {
-            // post and delete maps next
             debug: false,
             get_map: HashMap::new(),
+            post_map: HashMap::new(),
             static_mounts: Vec::new(),
         }
     }
@@ -51,10 +61,32 @@ impl Router {
     }
 
     // insert into map 
-    pub fn get(mut self, path: &str, handler: Handler) -> Self {
-        self.get_map.insert(path.to_string(), handler);
-        self
-    }
+    pub fn get<H, F>(mut self, path: &str, handler: H) -> Self
+    where
+        H: Fn(Request<Incoming>) -> F + Send + Sync + 'static,
+        F: Future<Output = Response> + Send + 'static,
+        {
+            self.get_map.insert(
+                path.to_string(),
+                Box::new(move |req| Box::pin(handler(req))),
+            );
+            self
+        }
+
+
+    pub fn post<H, F>(mut self, path: &str, handler: H) -> Self
+    where
+        H: Fn(Request<Incoming>) -> F + Send + Sync + 'static,
+        F: Future<Output = Response> + Send + 'static,
+        {
+            self.post_map.insert(
+                path.to_string(),
+                Box::new(move |req| Box::pin(handler(req))),
+            );
+            self
+        }
+
+
 
     // start the server 
     pub async fn start(self, port: &str) -> Result<()> {
@@ -96,9 +128,18 @@ impl Router {
             // GET
             if let Some(handler) = self.get_map.get(req.uri().path()) {
                 let uri = req.uri().path().to_string();
-                let resp = build_response(handler(req))
+                let resp = build_response(handler(req).await)
                     .await
                     .inspect(|resp| tracing::info!("GET: {:#?} {:#?} {:#?}", uri, resp.status(), resp.version()));
+                return resp;
+            }
+            
+            // POST
+            if let Some(handler) = self.post_map.get(req.uri().path()) {
+                let uri = req.uri().path().to_string();
+                let resp = build_response(handler(req).await)
+                    .await
+                    .inspect(|resp| tracing::info!("POST: {:#?} {:#?} {:#?}", uri, resp.status(), resp.version()));
                 return resp;
             }
 

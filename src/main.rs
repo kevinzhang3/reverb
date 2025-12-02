@@ -1,7 +1,14 @@
+use http_body_util::BodyExt;
 use reverb::{Router, Response, Request, DataFormat, HttpStatus, body};
 
-fn greet(_req: Request<body::Incoming>) -> Response {
+async fn greet(_req: Request<body::Incoming>) -> Response {
     return Response::new(DataFormat::JSON("Hello, world!".to_string()), HttpStatus::Ok); 
+}
+
+async fn return_body(req: Request<body::Incoming>) -> Response {
+    let body = req.collect().await.unwrap().to_bytes();
+    let str = String::from_utf8(body.to_vec()).unwrap();
+    return Response::new(DataFormat::JSON(str), HttpStatus::Ok);
 }
 
 #[tokio::main]
@@ -9,6 +16,7 @@ async fn main() {
     let router = Router::new()
         .serve_static("/", "public")
         .get("/greet", greet)
+        .post("/post", return_body)
         .debug(true);
 
     router.start("127.0.0.1:8080").await.unwrap();
