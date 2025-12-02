@@ -29,10 +29,4 @@ async fn main() {
 }
 ```
 
-Currently supports
-* Fully asynchronous server and routing logic
-*  GET requests
-*  Serving static files
 
-TO-DO
-* Ability for users to write async handlers
