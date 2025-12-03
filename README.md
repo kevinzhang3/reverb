@@ -1,6 +1,6 @@
 # reverb
 
-Reverb is a minimal web framework that provides a router, server, and the ability to write async REST API endpoints. 
+Reverb is a minimal web framework that provides a router, server, and the ability to write async REST APIs. 
 
 ## Example
 
